@@ -1,0 +1,34 @@
+[
+    {
+        "name": "udin",
+        "email": "udin@email.com",
+        "password": "password",
+        "saldo": "100000",
+        "product": [],
+        "cart": []
+    },
+    {
+        "name": "arip",
+        "email": "arip@email.com",
+        "password": "password",
+        "saldo": "150000",
+        "product": [],
+        "cart": []
+    },
+    {
+        "name": "petrus",
+        "email": "petrus@email.com",
+        "password": "password",
+        "saldo": "300000",
+        "product": [],
+        "cart": []
+    },
+    {
+        "name": "yakobus",
+        "email": "yakobus@email.com",
+        "password": "password",
+        "saldo": "400000",
+        "product": [],
+        "cart": []
+    }
+]
