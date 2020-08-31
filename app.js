@@ -5,6 +5,7 @@ const User = require('./User.model.js')
 const mongoose = require('mongoose')
 const db = 'mongodb://localhost/ecomm'
 const cors = require('cors')
+const { response } = require('express')
 
 mongoose.connect(db, { useNewUrlParser: true, useUnifiedTopology: true })
 
@@ -32,7 +33,7 @@ app.get('/', (req, res) => {
 
 // login user 
 app.post('/login', (req, res) => {
-    console.log(req.body)
+    // console.log(req.body)
     User.findOne({
         email: req.body.email
     }, (err, user) => {
@@ -92,8 +93,10 @@ app.post('/add-to-cart/:id', (req, res) => {
     req.body._id = mongoose.Types.ObjectId()
     let productAdded = {
         productId: req.params.id,
-        userId: req.headers.id,
-        amount_product: 1
+        name: req.body.name,
+        price: req.body.price,
+        sellerId: req.body.sellerId,
+        amount_product: 1,
     }
     User.findOne(
         { _id: req.headers.id },
@@ -101,6 +104,7 @@ app.post('/add-to-cart/:id', (req, res) => {
             if(err) {
                 res.send(err)
             } else {
+                // if cart was empty
                 if(results.cart.length === 0) {
                     User.findOneAndUpdate(
                         { _id: req.headers.id },
@@ -113,6 +117,44 @@ app.post('/add-to-cart/:id', (req, res) => {
                             }
                         }
                     )
+                } else {
+                    // find product in cart
+                    let exist = false
+                    results.cart.forEach(item => {
+                        // console.log(item, "ini id di item")
+                        if(item.productId === req.params.id) {
+                            item.amount_product++
+                            exist = true
+                        }
+                    });
+                    // if product its already exists in cart
+                    if(exist) {
+                        User.findOneAndUpdate(
+                            { _id: req.headers.id },
+                            { $set: { cart: results.cart }},
+                            (err, result) => {
+                                if(err) {
+                                    res.send(err)
+                                } else {
+                                    res.send(result)
+                                }
+                            }
+                        )
+                    }
+                    // if product its not exists in cart
+                    if(!exist) {
+                        User.findOneAndUpdate(
+                            { _id: req.headers.id },
+                            { $push: { cart: productAdded }},
+                            (err, result) => {
+                                if(err) {
+                                    res.send(err)
+                                } else {
+                                    res.send(result)
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -128,6 +170,72 @@ app.patch('/cart', (req, res) => {
                 res.send(err)
             } else {
                 res.send(result)
+            }
+        }
+    )
+})
+// payment process and divide income to all seller
+app.get('/pay', (req, res) => {
+    User.findOne(
+        {_id: req.headers.id},
+        (err, result) => {
+            if(err) {
+                res.send(err)
+            } else {
+                let totalPrice = 0
+                result.cart.forEach(item => {
+                    totalPrice+= item.amount_product * item.price
+                });
+                if(totalPrice > result.saldo) {
+                    res.status(400).json({
+                        msg: 'maaf saldo anda tidak cukup'
+                    })
+                } else {
+                    result.cart.forEach(item => {
+                        User.findOne(
+                            {_id: item.sellerId},
+                            (err, result) => {
+                                if(err) {
+                                    console.log(err)
+                                } else {
+                                    result.saldo = parseInt(result.saldo) + (parseInt(item.price)*item.amount_product)
+                                    User.findOneAndUpdate(
+                                        {_id: item.sellerId},
+                                        { $set: { saldo: result.saldo }},
+                                        (err, response) => {
+                                            if(err) {
+                                                console.log(err)
+                                            } console.log(response)
+                                        }
+                                    )
+                                    // console.log(result.saldo)
+                                    // console.log(result)
+                                }
+                            }
+                        )
+                    });
+                    // subtract user saldo with total price
+                    User.findOne(
+                        {_id: req.headers.id},
+                        (err, result) => {
+                            if(err) {
+                                console.log(err)
+                            } else {
+                                User.findOneAndUpdate(
+                                    {_id: req.headers.id},
+                                    {$set: { saldo: result.saldo - totalPrice }},
+                                    (err, response) => {
+                                        console.log(err)
+                                        console.log(response)
+                                    }
+                                )
+                            }
+                        }
+                    )
+                    res.status(200).json({
+                        msg: 'pembayaran sukses, terimakasih telah mempercayai kami'
+                    })
+                }
             }
         }
     )
