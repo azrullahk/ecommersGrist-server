@@ -202,6 +202,7 @@ app.get('/pay', (req, res) => {
                                     User.findOneAndUpdate(
                                         {_id: item.sellerId},
                                         { $set: { saldo: result.saldo }},
+                                        // { $set: { saldo: result.saldo }},
                                         (err, response) => {
                                             if(err) {
                                                 console.log(err)
